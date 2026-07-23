@@ -92,7 +92,7 @@ GitHub webhook
 Jenkins (laptop)
     ├── pytest — run tests
     ├── docker build — build image
-    ├── docker push — push to GitHub Registry
+    ├── docker push — push to GitHub Container Registry (ghcr.io)
     └── ansible-playbook
     ├── EC2-1: pull image, restart container
     └── EC2-2: ensure PostgreSQL is running
