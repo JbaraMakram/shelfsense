@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShelfSense</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; background:#f4f6f9; color:#333; }
+    nav { background:#2c3e50; padding:14px 24px; display:flex; align-items:center; gap:24px; }
+    nav a { color:#fff; text-decoration:none; font-size:14px; }
+    nav .brand { font-size:18px; font-weight:bold; color:#3498db; }
+    nav a:hover { color:#3498db; }
+    .container { max-width:1000px; margin:30px auto; padding:0 20px; }
+    .card { background:#fff; border-radius:8px; padding:20px; margin-bottom:20px; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+    table { width:100%; border-collapse:collapse; }
+    th { background:#2c3e50; color:#fff; padding:10px 12px; text-align:left; font-size:13px; }
+    td { padding:10px 12px; border-bottom:1px solid #eee; font-size:13px; }
+    tr:hover td { background:#f9f9f9; }
+    .btn { padding:8px 16px; border:none; border-radius:5px; cursor:pointer; font-size:13px; text-decoration:none; display:inline-block; }
+    .btn-blue { background:#3498db; color:#fff; }
+    .btn-red  { background:#e74c3c; color:#fff; }
+    .btn:hover { opacity:0.85; }
+    input, select { width:100%; padding:9px 12px; margin:6px 0 14px; border:1px solid #ddd; border-radius:5px; font-size:13px; }
+    label { font-size:13px; font-weight:bold; color:#555; }
+    .badge { padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold; }
+    .badge-red { background:#fdecea; color:#e74c3c; }
+    .badge-green { background:#eafaf1; color:#27ae60; }
+    .stat { text-align:center; }
+    .stat-num { font-size:32px; font-weight:bold; color:#2c3e50; }
+    .stat-label { font-size:13px; color:#888; margin-top:4px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="brand">📦 ShelfSense</span>
+    <a href="/">Dashboard</a>
+    <a href="/items">Items</a>
+    <a href="/items/add">Add Item</a>
+    <a href="/health">Health</a>
+    <a href="/metrics">Metrics</a>
+  </nav>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

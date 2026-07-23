@@ -1,0 +1,22 @@
+# Python
+app/venv/
+app/__pycache__/
+app/*.pyc
+app/*.pyo
+app/*.db
+
+# Git
+.git/
+.gitignore
+
+# Environment files — never copy secrets into an image
+.env
+*.env
+
+# Documentation — not needed inside the container
+docs/
+*.md
+
+# OS files
+.DS_Store
+Thumbs.db

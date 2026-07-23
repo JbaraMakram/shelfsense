@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width:500px">
+  <h2 style="margin-bottom:20px">Add New Item</h2>
+  <form method="POST">
+    <label>Item Name</label>
+    <input type="text" name="name" placeholder="e.g. Safety Gloves" required>
+    <label>Category</label>
+    <select name="category">
+      <option>Tools</option>
+      <option>Safety</option>
+      <option>Packaging</option>
+      <option>Electronics</option>
+      <option>Cleaning</option>
+      <option>Other</option>
+    </select>
+    <label>Quantity</label>
+    <input type="number" name="quantity" placeholder="e.g. 50" required min="0">
+    <label>Location</label>
+    <input type="text" name="location" placeholder="e.g. Shelf A3" required>
+    <button type="submit" class="btn btn-blue" style="width:100%;margin-top:6px">Add Item</button>
+  </form>
+</div>
+{% endblock %}

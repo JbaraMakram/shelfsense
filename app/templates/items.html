@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h2>All Items</h2>
+    <a href="/items/add" class="btn btn-blue">+ Add Item</a>
+  </div>
+  {% if items %}
+  <table>
+    <tr><th>Name</th><th>Category</th><th>Quantity</th><th>Location</th><th>Action</th></tr>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td>{{ item.category }}</td>
+      <td>
+        <span class="badge {{ 'badge-red' if item.quantity < 5 else 'badge-green' }}">
+          {{ item.quantity }}
+        </span>
+      </td>
+      <td>{{ item.location }}</td>
+      <td><a href="/items/delete/{{ item.id }}" class="btn btn-red" onclick="return confirm('Delete?')">Delete</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:#888">No items yet. <a href="/items/add">Add one</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

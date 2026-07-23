@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-bottom:20px">Warehouse Dashboard</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+    <div class="card stat">
+      <div class="stat-num">{{ total }}</div>
+      <div class="stat-label">Total Items</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-num" style="color:#27ae60">{{ items|selectattr('quantity','gt',10)|list|length }}</div>
+      <div class="stat-label">Well Stocked</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-num" style="color:#e74c3c">{{ low_stock|length }}</div>
+      <div class="stat-label">Low Stock (under 5)</div>
+    </div>
+  </div>
+</div>
+{% if low_stock %}
+<div class="card">
+  <h3 style="color:#e74c3c;margin-bottom:14px">⚠️ Low Stock Alert</h3>
+  <table>
+    <tr><th>Item</th><th>Quantity</th><th>Location</th></tr>
+    {% for item in low_stock %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td><span class="badge badge-red">{{ item.quantity }}</span></td>
+      <td>{{ item.location }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+step_by_step.txt
+*.db
+app/venv/
