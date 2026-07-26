@@ -1,0 +1,57 @@
+---
+- name: Configure database server with PostgreSQL
+  hosts: db
+  become: true
+
+  vars:
+    db_name: shelfsense
+    db_user: shelfsense_user
+    db_password: shelfsense_pass
+
+  tasks:
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install PostgreSQL and Python driver
+      apt:
+        name:
+          - postgresql
+          - postgresql-contrib
+          - python3-psycopg2
+        state: present
+
+    - name: Start and enable PostgreSQL
+      service:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Create database user
+      shell: |
+        sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_password }}';" 2>/dev/null || true
+
+    - name: Create database
+      shell: |
+        sudo -u postgres psql -c "CREATE DATABASE {{ db_name }} OWNER {{ db_user }};" 2>/dev/null || true
+
+    - name: Allow remote connections in postgresql.conf
+      lineinfile:
+        path: /etc/postgresql/14/main/postgresql.conf
+        regexp: "^#listen_addresses"
+        line: "listen_addresses = '*'"
+      notify: restart postgresql
+
+    - name: Allow app server in pg_hba.conf
+      lineinfile:
+        path: /etc/postgresql/14/main/pg_hba.conf
+        line: "host shelfsense shelfsense_user 10.0.1.0/24 md5"
+      notify: restart postgresql
+
+  handlers:
+    - name: restart postgresql
+      service:
+        name: postgresql
+        state: restarted

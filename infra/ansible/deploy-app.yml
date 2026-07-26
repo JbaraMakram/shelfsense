@@ -1,0 +1,72 @@
+---
+- name: Configure app server and deploy ShelfSense
+  hosts: app
+  become: true
+
+  vars:
+    app_image: ghcr.io/jbaramakram/shelfsense:latest
+    app_port: 5000
+    db_host: 13.62.51.191
+
+  tasks:
+
+    # ── System update ─────────────────────────────────────
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # ── Install Docker ────────────────────────────────────
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    # ── Install Docker Compose ────────────────────────────
+    - name: Install Docker Compose
+      apt:
+        name: docker-compose
+        state: present
+
+    # ── Deploy app ────────────────────────────────────────
+    - name: Stop existing container if running
+      docker_container:
+        name: shelfsense-app
+        state: absent
+      ignore_errors: yes
+
+    - name: Start ShelfSense container
+      docker_container:
+        name: shelfsense-app
+        image: "{{ app_image }}"
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "{{ app_port }}:5000"
+        env:
+          DATABASE_URL: "postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
+
+    # ── Verify ────────────────────────────────────────────
+    - name: Wait for app to be ready
+      uri:
+        url: "http://localhost:{{ app_port }}/health"
+        status_code: 200
+      retries: 5
+      delay: 5
+      register: health_result
+
+    - name: Print health check result
+      debug:
+        msg: "App is healthy: {{ health_result.json }}"
