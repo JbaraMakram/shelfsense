@@ -1,0 +1,26 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/jbaramakram/shelfsense
+  tag: "latest"
+  pullPolicy: Always
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 5000
+  nodePort: 30080
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "250m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+
+env:
+  PORT: "5000"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+  DATABASE_URL: "sqlite:///shelfsense.db"
