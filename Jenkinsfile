@@ -26,7 +26,8 @@ pipeline {
                     python3 -m venv venv
                     . venv/bin/activate
                     pip install -r requirements.txt --quiet
-                    python3 -m pytest tests/ -v 2>/dev/null || echo "No tests found — skipping"
+                    pip install pytest --quiet
+                    python3 -m pytest tests/ -v
                 '''
             }
         }
@@ -65,6 +66,7 @@ pipeline {
                 )]) {
                     sh """
                         cd infra/ansible
+                        ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
                           --private-key \$SSH_KEY_FILE \
                           -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}"
@@ -75,7 +77,7 @@ pipeline {
 
         stage('Health Check') {
             steps {
-                echo "Verifying deployment..."
+                echo "Verifying deployment on AWS..."
                 sh """
                     sleep 10
                     curl -sf http://${APP_SERVER}:5000/health || exit 1
