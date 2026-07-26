@@ -94,3 +94,10 @@
       service:
         name: nginx
         state: restarted
+
+    - name: Initialize database tables
+      shell: >
+        docker exec shelfsense-app python3 -c
+        "from app import app, db; app.app_context().push(); db.create_all(); print('Tables ready')"
+      retries: 3
+      delay: 5
