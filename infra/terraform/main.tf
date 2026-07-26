@@ -128,13 +128,13 @@ resource "aws_security_group" "shelfsense_db_sg" {
     description = "SSH from admin IP only"
   }
 
-  # PostgreSQL — only from app security group
+  # PostgreSQL — from app server subnet
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.shelfsense_app_sg.id]
-    description     = "PostgreSQL from app server only"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.1.0/24"]
+    description = "PostgreSQL from app subnet only"
   }
 
   # All outbound allowed

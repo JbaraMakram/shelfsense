@@ -62,9 +62,9 @@ pipeline {
                 sh '''
                     cd infra/terraform
                     APP_IP=$(terraform output -raw app_server_ip)
-                    DB_IP=$(terraform output -raw db_server_ip)
-                    echo "App server: $APP_IP"
-                    echo "DB server:  $DB_IP"
+                    DB_IP=$(terraform output -raw db_server_private_ip)
+                    echo "App server public IP: $APP_IP"
+                    echo "DB server private IP: $DB_IP"
 
                     cat > ../ansible/inventory.ini << EOF
 [app]
@@ -76,8 +76,7 @@ ${DB_IP} ansible_user=ubuntu
 [all:vars]
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 EOF
-                    echo "Inventory updated with live IPs"
-                    cat ../ansible/inventory.ini
+                    echo "Inventory updated"
                 '''
             }
         }
@@ -90,14 +89,13 @@ EOF
                     keyFileVariable: 'SSH_KEY_FILE'
                 )]) {
                     sh """
-                        APP_IP=\$(cd infra/terraform && terraform output -raw app_server_ip)
-                        DB_IP=\$(cd infra/terraform && terraform output -raw db_server_ip)
+                        DB_PRIVATE_IP=\$(cd infra/terraform && terraform output -raw db_server_private_ip)
                         cd infra/ansible
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
                           --private-key \$SSH_KEY_FILE \
                           -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}" \
-                          -e "db_host=\$DB_IP"
+                          -e "db_host=\$DB_PRIVATE_IP"
                     """
                 }
             }
@@ -108,9 +106,9 @@ EOF
                 echo "Verifying deployment on AWS..."
                 sh '''
                     APP_IP=$(cd infra/terraform && terraform output -raw app_server_ip)
-                    sleep 10
-                    curl -sf http://$APP_IP:5000/health || exit 1
-                    echo "App is healthy on AWS at http://$APP_IP:5000"
+                    sleep 15
+                    curl -sf http://$APP_IP/health || exit 1
+                    echo "App is healthy on AWS at http://$APP_IP"
                 '''
             }
         }
@@ -120,7 +118,7 @@ EOF
         success {
             sh '''
                 APP_IP=$(cd infra/terraform && terraform output -raw app_server_ip)
-                echo "Pipeline SUCCESS — Build #${BUILD_NUMBER} deployed to http://$APP_IP:5000"
+                echo "Pipeline SUCCESS — Build #${BUILD_NUMBER} deployed to http://$APP_IP"
             '''
         }
         failure {
