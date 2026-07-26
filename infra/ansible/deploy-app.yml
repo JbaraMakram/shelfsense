@@ -55,14 +55,6 @@
                   proxy_set_header X-Real-IP $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
               }
-
-              location /health {
-                  proxy_pass http://localhost:5000/health;
-              }
-
-              location /metrics {
-                  proxy_pass http://localhost:5000/metrics;
-              }
           }
         dest: /etc/nginx/sites-available/default
       notify: restart nginx
@@ -74,27 +66,22 @@
         enabled: true
 
     - name: Stop existing container if running
-      docker_container:
-        name: shelfsense-app
-        state: absent
-      ignore_errors: yes
+      shell: docker rm -f shelfsense-app 2>/dev/null || true
 
-    - name: Start ShelfSense container
-      docker_container:
-        name: shelfsense-app
-        image: "{{ app_image }}"
-        state: started
-        restart_policy: unless-stopped
-        ports:
-          - "{{ app_port }}:5000"
-        env:
-          DATABASE_URL: "postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
+    - name: Start ShelfSense container with host network
+      shell: >
+        docker run -d
+        --name shelfsense-app
+        --network host
+        --restart unless-stopped
+        -e DATABASE_URL="postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
+        {{ app_image }}
 
     - name: Wait for app to be ready
       uri:
         url: "http://localhost:{{ app_port }}/health"
         status_code: 200
-      retries: 5
+      retries: 10
       delay: 5
       register: health_result
 
