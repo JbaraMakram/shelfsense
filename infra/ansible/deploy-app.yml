@@ -6,7 +6,7 @@
   vars:
     app_image: ghcr.io/jbaramakram/shelfsense:latest
     app_port: 5000
-    db_host: 13.62.51.191
+    db_host: "{{ db_host | default('13.62.51.191') }}"
 
   tasks:
 

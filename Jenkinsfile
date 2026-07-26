@@ -5,7 +5,6 @@ pipeline {
         IMAGE_NAME    = "ghcr.io/jbaramakram/shelfsense"
         IMAGE_TAG     = "${BUILD_NUMBER}"
         REGISTRY_CRED = "github-registry"
-        APP_SERVER    = "13.60.251.87"
         SSH_KEY       = "shelfsense-ssh-key"
     }
 
@@ -57,6 +56,32 @@ pipeline {
             }
         }
 
+        stage('Read Terraform Outputs') {
+            steps {
+                echo "Reading EC2 IPs from Terraform state..."
+                sh '''
+                    cd infra/terraform
+                    APP_IP=$(terraform output -raw app_server_ip)
+                    DB_IP=$(terraform output -raw db_server_ip)
+                    echo "App server: $APP_IP"
+                    echo "DB server:  $DB_IP"
+
+                    cat > ../ansible/inventory.ini << EOF
+[app]
+${APP_IP} ansible_user=ubuntu
+
+[db]
+${DB_IP} ansible_user=ubuntu
+
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+EOF
+                    echo "Inventory updated with live IPs"
+                    cat ../ansible/inventory.ini
+                '''
+            }
+        }
+
         stage('Deploy to AWS') {
             steps {
                 echo "Deploying to EC2 via Ansible..."
@@ -65,11 +90,14 @@ pipeline {
                     keyFileVariable: 'SSH_KEY_FILE'
                 )]) {
                     sh """
+                        APP_IP=\$(cd infra/terraform && terraform output -raw app_server_ip)
+                        DB_IP=\$(cd infra/terraform && terraform output -raw db_server_ip)
                         cd infra/ansible
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
                           --private-key \$SSH_KEY_FILE \
-                          -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}"
+                          -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}" \
+                          -e "db_host=\$DB_IP"
                     """
                 }
             }
@@ -78,18 +106,22 @@ pipeline {
         stage('Health Check') {
             steps {
                 echo "Verifying deployment on AWS..."
-                sh """
+                sh '''
+                    APP_IP=$(cd infra/terraform && terraform output -raw app_server_ip)
                     sleep 10
-                    curl -sf http://${APP_SERVER}:5000/health || exit 1
-                    echo "App is healthy on AWS"
-                """
+                    curl -sf http://$APP_IP:5000/health || exit 1
+                    echo "App is healthy on AWS at http://$APP_IP:5000"
+                '''
             }
         }
     }
 
     post {
         success {
-            echo "Pipeline SUCCESS — Build #${BUILD_NUMBER} deployed to http://${APP_SERVER}:5000"
+            sh '''
+                APP_IP=$(cd infra/terraform && terraform output -raw app_server_ip)
+                echo "Pipeline SUCCESS — Build #${BUILD_NUMBER} deployed to http://$APP_IP:5000"
+            '''
         }
         failure {
             echo "Pipeline FAILED — Check the logs above"
