@@ -10,13 +10,11 @@
 
   tasks:
 
-    # ── System update ─────────────────────────────────────
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
 
-    # ── Install Docker ────────────────────────────────────
     - name: Install Docker
       apt:
         name: docker.io
@@ -34,13 +32,47 @@
         groups: docker
         append: true
 
-    # ── Install Docker Compose ────────────────────────────
     - name: Install Docker Compose
       apt:
         name: docker-compose
         state: present
 
-    # ── Deploy app ────────────────────────────────────────
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Configure nginx as reverse proxy
+      copy:
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://localhost:5000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+
+              location /health {
+                  proxy_pass http://localhost:5000/health;
+              }
+
+              location /metrics {
+                  proxy_pass http://localhost:5000/metrics;
+              }
+          }
+        dest: /etc/nginx/sites-available/default
+      notify: restart nginx
+
+    - name: Start and enable nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
     - name: Stop existing container if running
       docker_container:
         name: shelfsense-app
@@ -58,7 +90,6 @@
         env:
           DATABASE_URL: "postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
 
-    # ── Verify ────────────────────────────────────────────
     - name: Wait for app to be ready
       uri:
         url: "http://localhost:{{ app_port }}/health"
@@ -70,3 +101,9 @@
     - name: Print health check result
       debug:
         msg: "App is healthy: {{ health_result.json }}"
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
