@@ -128,6 +128,10 @@ EOF
                           -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}" \
                           -e "db_host=\$DB_PRIVATE_IP"
                     """
+		}
+	}
+}
+
 
         stage('Health Check') {
             steps {
