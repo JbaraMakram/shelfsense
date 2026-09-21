@@ -1,99 +1,45 @@
-# ShelfSense - Cloud Architecture
+# Architecture
+
+This is how ShelfSense is put together.
 
 ## Overview
 
-ShelfSense runs on AWS using Free Tier resources.
-Two EC2 instances are used — one for the application,
-one for the database.
-All infrastructure is provisioned with Terraform 
-and configured with Ansible.
+```
+GitHub  --push-->  Jenkins  --build & push image-->  GHCR
+                       |
+                       v
+                  Terraform (creates EC2 servers)
+                       |
+                       v
+                  Ansible (deploys app to servers)
+                       |
+                       v
+        App server (EC2) <---> DB server (EC2)
+                       |
+                       v
+              Prometheus + Grafana (monitoring)
+```
 
-## AWS Services Used
+## Pieces
 
-| Service 		| Purpose 			| Why 			                         |
-|-----------------------|-------------------------------|------------------------------------------------|
-| EC2 app (t2.micro)    | Runs the Docker container     | Free Tier, enough for our app 		 |
-| EC2 db (t2.micro)     | Runs PostgreSQL               | Separate from app for reliability 		 |
-| VPC                   | Private network               | Isolates our resources from other AWS accounts |
-| Public Subnet         | Both EC2s live here           | Need internet access 				 |
-| Internet Gateway      | Connects VPC to internet      | Required for public access 			 |
-| Security Group (app)  | Firewall for app server       | Controls who reaches the app 			 |
-| Security Group (db)   | Firewall for db server        | Only app server can reach database 		 |
-| Key Pair              | SSH access to both servers    | Secure admin login 				 |
+**GitHub** holds the code. A webhook tells Jenkins when something new is pushed.
 
-## Network Design
-Internet
-    │
-Internet Gateway
-    │
-VPC (10.0.0.0/16)
-    │
-Public Subnet (10.0.1.0/24)
-    │
-    ├── EC2-1: App Server (t2.micro) — Ubuntu 22.04
-    │ └── Docker Container: shelfsense:latest
-    │ ├── Flask app (port 5000)
-    │ ├── /health (liveness)
-    │ ├── /ready (readiness)
-    │ └── /metrics (Prometheus)
-    │
-    └── EC2-2: Database Server (t2.micro) — Ubuntu 22.04
-    └── PostgreSQL (port 5432)
-    └── only reachable from EC2-1
+**Jenkins** runs the pipeline. It tests the code, builds a Docker image, pushes it to GHCR, makes sure the AWS servers exist (Terraform), and deploys the new image (Ansible).
 
+**GHCR** (GitHub Container Registry) stores the Docker images.
 
+**Terraform** creates two EC2 servers in AWS, region eu-north-1. Both are t3.micro on Ubuntu 22.04. One is the app server, one is the database server.
 
-## Security Group Rules
-### App Server
-| Type 	 | Port | Source       | Reason                   |
-|--------|------|--------------|--------------------------|
-| SSH 	 | 22   | Your IP only | Admin access             |
-| HTTP   | 80   | 0.0.0.0/0    | App access from internet |
-| Custom | 5000 | 0.0.0.0/0    | Flask direct access      |
+**Ansible** configures the app server: installs Docker, sets up nginx as a reverse proxy, and runs the app container.
 
-### Database Server
-| Type       | Port | Source             | Reason                           |
-|------------|------|--------------------|----------------------------------|
-| SSH        | 22   | Your IP only       | Admin access                     |
-| PostgreSQL | 5432 | App Server SG only | Database only reachable from app |
+**App server** runs the Flask app inside Docker, using `--network host` so it can reach AWS resources properly. Nginx sits in front of it on port 80.
 
-## Design Decisions
+**DB server** runs PostgreSQL. The app connects to it using its private IP, not the public IP.
 
-**Why 2 EC2 instances?**
-App and database on the same server means a single point of failure.
-If the server goes down, both the app and the data are lost.
-Separating them means the database stays running even if the app server has issues.
+**Prometheus** scrapes the app's `/metrics` endpoint. **Grafana** shows the data as dashboards.
 
-**Why not 3?**
-A third EC2 would serve as a load balancer — distributing traffic across
-multiple app servers. We only have one app server so a load balancer has
-nothing to balance. Unnecessary complexity and cost for this project scale.
+**Kubernetes (minikube) + Helm** is a second way the app is run, for the container orchestration part of the course. It runs locally, separate from the AWS EC2 setup.
 
-**Why t2.micro for both?**
-Free Tier eligible — 750 hours/month each. ShelfSense is a small inventory
-app. 1 vCPU and 1GB RAM is enough for both the app and the database at
-this scale.
+## Why two EC2 servers
 
-**Why Ubuntu 22.04?**
-Same OS as our development machine. No environment differences between
-development and production.
-
-**Why public subnet for the database?**
-A private subnet requires a NAT Gateway which costs money.
-The database Security Group is locked to only accept connections from the
-app server — so it is protected even in a public subnet.
-
-## Full Pipeline Flow
-
-git push
-    │
-GitHub webhook
-    │
-Jenkins (laptop)
-    ├── pytest — run tests
-    ├── docker build — build image
-    ├── docker push — push to GitHub Container Registry (ghcr.io)
-    └── ansible-playbook
-    ├── EC2-1: pull image, restart container
-    └── EC2-2: ensure PostgreSQL is running
-
+Splitting app and database onto separate servers is closer to how real production setups work, and it was a course requirement to show this separation.
