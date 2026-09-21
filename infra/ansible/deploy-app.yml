@@ -62,7 +62,7 @@
     - name: Start and enable nginx
       service:
         name: nginx
-        state: started
+        state: restarted
         enabled: true
 
     - name: Run ShelfSense container
