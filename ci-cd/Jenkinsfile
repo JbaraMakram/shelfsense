@@ -111,12 +111,16 @@ EOF
                     credentialsId: "${SSH_KEY}",
                     keyFileVariable: 'SSH_KEY_FILE'
                 )]) {
-                    sh """
+
+                     sh """
                         DB_PRIVATE_IP=\$(cd infra/terraform && terraform output -raw db_server_private_ip)
+                        APP_IP=\$(cd infra/terraform && terraform output -raw app_server_ip)
                         cd infra/ansible
+
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-db.yml \
-                          --private-key \$SSH_KEY_FILE
+                          --private-key \$SSH_KEY_FILE \
+                          --ssh-common-args="-o ProxyCommand='ssh -o StrictHostKeyChecking=no -i \$SSH_KEY_FILE -W %h:%p ubuntu@\$APP_IP'"
 
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
@@ -124,9 +128,6 @@ EOF
                           -e "app_image=${IMAGE_NAME}:${IMAGE_TAG}" \
                           -e "db_host=\$DB_PRIVATE_IP"
                     """
-                }
-            }
-        }
 
         stage('Health Check') {
             steps {
