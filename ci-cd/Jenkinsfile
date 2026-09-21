@@ -89,12 +89,12 @@ pipeline {
                     echo "App server public IP: $APP_IP"
                     echo "DB server private IP: $DB_IP"
 
-                    cat > ../ansible/inventory.ini << EOF
+                     cat > ../ansible/inventory.ini << EOF
 [app]
 ${APP_IP} ansible_user=ubuntu
 
 [db]
-${DB_IP} ansible_user=ubuntu
+${DB_IP} ansible_user=ubuntu ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand="ssh -o StrictHostKeyChecking=no -i /tmp/ssh_key -W %h:%p ubuntu@${APP_IP}"'
 
 [all:vars]
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
@@ -117,10 +117,12 @@ EOF
                         APP_IP=\$(cd infra/terraform && terraform output -raw app_server_ip)
                         cd infra/ansible
 
+                                                cp \$SSH_KEY_FILE /tmp/ssh_key
+                        chmod 600 /tmp/ssh_key
+
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-db.yml \
-                          --private-key \$SSH_KEY_FILE \
-                          --ssh-common-args="-o ProxyCommand='ssh -o StrictHostKeyChecking=no -i \$SSH_KEY_FILE -W %h:%p ubuntu@\$APP_IP'"
+                          --private-key \$SSH_KEY_FILE
 
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
