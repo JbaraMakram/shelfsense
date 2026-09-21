@@ -55,22 +55,30 @@ pipeline {
                 }
             }
         }
+        
         stage('Terraform Apply') {
             steps {
                 echo "Applying Terraform infrastructure..."
-                withCredentials([usernamePassword(
-                    credentialsId: 'aws-credentials',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'aws-credentials',
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                    ),
+                    string(
+                        credentialsId: 'my-ip',
+                        variable: 'MY_IP'
+                    )
+                ]) {
                     sh '''
                         cd infra/terraform
                         terraform init -input=false
-                        terraform apply -auto-approve -input=false
+                        terraform apply -auto-approve -input=false -var="my_ip=${MY_IP}"
                     '''
                 }
             }
         }
+
         stage('Read Terraform Outputs') {
             steps {
                 echo "Reading EC2 IPs from Terraform state..."
