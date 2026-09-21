@@ -65,17 +65,26 @@
         state: started
         enabled: true
 
-    - name: Stop existing container if running
-      shell: docker rm -f shelfsense-app 2>/dev/null || true
+    - name: Run ShelfSense container
+      community.docker.docker_container:
+        name: shelfsense-app
+        image: "{{ app_image }}"
+        state: started
+        restart_policy: unless-stopped
+        network_mode: host
+        pull: true
+        recreate: true
+        env:
+          DATABASE_URL: "postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
 
-    - name: Start ShelfSense container with host network
+    - name: Initialize database tables
       shell: >
-        docker run -d
-        --name shelfsense-app
-        --network host
-        --restart unless-stopped
-        -e DATABASE_URL="postgresql://shelfsense_user:shelfsense_pass@{{ db_host }}:5432/shelfsense"
-        {{ app_image }}
+        docker exec shelfsense-app python3 -c
+        "from app import app, db; app.app_context().push(); db.create_all(); print('Tables ready')"
+      register: db_init_result
+      until: db_init_result.rc == 0
+      retries: 3
+      delay: 5
 
     - name: Wait for app to be ready
       uri:
@@ -95,9 +104,4 @@
         name: nginx
         state: restarted
 
-    - name: Initialize database tables
-      shell: >
-        docker exec shelfsense-app python3 -c
-        "from app import app, db; app.app_context().push(); db.create_all(); print('Tables ready')"
-      retries: 3
-      delay: 5
+
