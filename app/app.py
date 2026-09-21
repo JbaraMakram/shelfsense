@@ -3,8 +3,20 @@ from flask_sqlalchemy import SQLAlchemy
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import time
 import os
+import logging
+from pythonjsonlogger import jsonlogger
 
 app = Flask(__name__)
+
+
+# ── JSON Logging ──────────────────────────────────────────────────
+log_handler = logging.FileHandler('logs/shelfsense.log')
+log_formatter = jsonlogger.JsonFormatter(
+    '%(asctime)s %(levelname)s %(name)s %(message)s'
+)
+log_handler.setFormatter(log_formatter)
+app.logger.addHandler(log_handler)
+app.logger.setLevel(logging.INFO)
 
 # ── Database ──────────────────────────────────────────────────────
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///shelfsense.db')
@@ -38,6 +50,7 @@ class Item(db.Model):
 @app.route('/')
 def dashboard():
     start = time.time()
+    app.logger.info('request_received', extra={'endpoint': '/', 'method': 'GET'})
     items      = Item.query.all()
     total      = len(items)
     low_stock  = [i for i in items if i.quantity < 5]
@@ -48,6 +61,7 @@ def dashboard():
 @app.route('/items')
 def items():
     start = time.time()
+    app.logger.info('request_received', extra={'endpoint': '/items', 'method': 'GET'})
     all_items = Item.query.all()
     REQUEST_COUNT.labels(method='GET', endpoint='/items', status='200').inc()
     REQUEST_LATENCY.labels(endpoint='/items').observe(time.time() - start)
@@ -55,6 +69,7 @@ def items():
 
 @app.route('/items/add', methods=['GET', 'POST'])
 def add_item():
+    app.logger.info('request_received', extra={'endpoint': '/items/add', 'method': request.method})
     if request.method == 'POST':
         item = Item(
             name     = request.form['name'],
