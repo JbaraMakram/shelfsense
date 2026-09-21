@@ -128,6 +128,15 @@ resource "aws_security_group" "shelfsense_db_sg" {
     description = "SSH from admin IP only"
   }
 
+  # SSH — from app server (used as jump host)
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.1.0/24"]
+    description = "SSH from app subnet (jump host)"
+  }
+
   # PostgreSQL — from app server subnet
   ingress {
     from_port   = 5432
@@ -137,6 +146,7 @@ resource "aws_security_group" "shelfsense_db_sg" {
     description = "PostgreSQL from app subnet only"
   }
 
+	
   # All outbound allowed
   egress {
     from_port   = 0
