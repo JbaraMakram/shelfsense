@@ -104,7 +104,7 @@ EOF
             }
         }
 
-        stage('Deploy to AWS') {
+                stage('Deploy to AWS') {
             steps {
                 echo "Deploying to EC2 via Ansible..."
                 withCredentials([sshUserPrivateKey(
@@ -114,6 +114,10 @@ EOF
                     sh """
                         DB_PRIVATE_IP=\$(cd infra/terraform && terraform output -raw db_server_private_ip)
                         cd infra/ansible
+                        ANSIBLE_HOST_KEY_CHECKING=False \
+                        ansible-playbook -i inventory.ini deploy-db.yml \
+                          --private-key \$SSH_KEY_FILE
+
                         ANSIBLE_HOST_KEY_CHECKING=False \
                         ansible-playbook -i inventory.ini deploy-app.yml \
                           --private-key \$SSH_KEY_FILE \
