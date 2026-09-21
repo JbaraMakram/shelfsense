@@ -219,3 +219,7 @@ __marimo__/
 step_by_step.txt
 *.db
 app/venv/
+.~lock.*
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup
+infra/terraform/.terraform/
